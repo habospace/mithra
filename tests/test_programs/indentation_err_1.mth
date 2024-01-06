@@ -1,0 +1,33 @@
+
+def primeFactors(n, x):
+    x = None
+    y = False
+    xs = {"1": "1", "2": [1, -2, 3, 4], "5": 4.56, "6": {"1": [1, 2], "2": None}}
+    if eqv(n, 1):
+        return []
+    facs = factors(n)
+    if eqv(length(facs), 0):
+        return [n]
+    else:
+        return concat(facs, primeFactors(div(n, head(facs))))
+
+
+def factors(n):
+    def filterFunc(x):
+        if kaka(8, 9, [1, "buzi", 3]):
+            return eqv(mod(n, x), 0)
+    return take(1, filter(filterFunc, generateList(2, minus(n, 1))))
+
+def primeFactors(n):
+    if eqv(n, 1):
+        return {}
+    else:
+        facs = factors(n)
+        if eqv(length(facs), 0):
+            return [n]
+        else:
+            
+
+def isPrime(x):
+    return and(gte(1, length(primeFactors(x))), ne(x, 1))
+

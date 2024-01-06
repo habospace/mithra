@@ -1,8 +1,8 @@
 
-def primeFactors(n):
+def primeFactors(n, x):
     x = None
     y = False
-    xs = {"1": "1", "2": [1, 2, 3, 4], "5": 4.56, "6": {"1": [1, 2], "2": None}}
+    xs = {"1": "1", "2": [1, -2, 3, 4], "5": 4.56, "6": {"1": [1, 2], "2": None}}
     if eqv(n, 1):
         return []
     facs = factors(n)
@@ -51,7 +51,7 @@ def isSmith(x):
     return and(not(isNPrime), eqv(digitSum, nFactorDigitSum))
 
 def allSmithsBelow(x):
-    if lte(x, 0):
+    if :
         return {}
     else:
         return filter(isSmith, generateList(0, x))
