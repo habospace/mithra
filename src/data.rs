@@ -33,7 +33,7 @@ pub enum MithraVal {
 pub enum MithraError {
     TextConsumed,                                 // error when entire raw text is consumed
     NothingParsed(LineNum, InlinePointer),        // recoverable generic parsing error
-    ParseError(String, LineNum, InlinePointer), // non-recoverable parsing error with error context
+    ParseError(String, LineNum, InlinePointer),   // non-recoverable parsing error with error context
     RuntimeError(String, LineNum, InlinePointer), // runtime error
 }
 
