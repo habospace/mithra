@@ -24,7 +24,7 @@ use super::errors::unterminated_dictionary_err;
 use super::errors::unterminated_func_call_err;
 use super::errors::unterminated_list_err;
 
-use super::errors::missing_close_parenthesis_before_func_args_err;
+use super::errors::missing_close_parenthesis_after_func_args_err;
 use super::errors::missing_colon_in_function_definition_line_err;
 use super::errors::missing_function_args_err;
 use super::errors::missing_function_name_err;
@@ -45,7 +45,7 @@ use super::parser_combinators::sep_by;
 type FnMithraParser = FnParser<MithraVal>;
 type ClosureMithraParser = ClosureParser<MithraVal>;
 
-fn parse_null(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_null(text: &mut Text) -> Result<MithraVal, MithraError> {
     string(format!("None").chars().collect())(text)?;
     Ok(MithraVal::Null)
 }
@@ -61,72 +61,82 @@ pub fn parse_bool(text: &mut Text) -> Result<MithraVal, MithraError> {
     Ok(MithraVal::Bool(false))
 }
 
-fn parse_int(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_int(text: &mut Text) -> Result<MithraVal, MithraError> {
     fn chars_to_int(chars: Vec<char>) -> Result<i64, ParseIntError> {
         let string: String = chars.into_iter().collect();
         string.as_str().parse::<i64>()
     }
-
+    let negation = parse_char('-')(text);
     let int_chars = numeric_chars(text)?;
     match chars_to_int(int_chars) {
-        Ok(int) => Ok(MithraVal::Int(int)),
+        Ok(int) => match negation {
+            Ok(_) => Ok(MithraVal::Int(-int)),
+            Err(_) => Ok(MithraVal::Int(int)),
+        },
         Err(_) => Err(nothing_parsed_err(text.line_num(), text.inline_position())),
     }
 }
 
-fn parse_float(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_float(text: &mut Text) -> Result<MithraVal, MithraError> {
     fn chars_to_float(chars: Vec<char>) -> Result<f64, ParseFloatError> {
         let string: String = chars.into_iter().collect();
         string.as_str().parse::<f64>()
     }
-
+    let negation = parse_char('-')(text);
     let mut integer_part = numeric_chars(text)?;
     parse_char('.')(text)?;
     integer_part.extend(vec!['.']);
     let fractional_part = numeric_chars(text)?;
     integer_part.extend(fractional_part);
-
     match chars_to_float(integer_part) {
-        Ok(float) => Ok(MithraVal::Float(float)),
+        Ok(float) => match negation {
+            Ok(_) => Ok(MithraVal::Float(-float)),
+            Err(_) => Ok(MithraVal::Float(float)),
+        },
         Err(_) => Err(nothing_parsed_err(text.line_num(), text.inline_position())),
     }
 }
 
-fn parse_atom(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_atom(text: &mut Text) -> Result<MithraVal, MithraError> {
     let atom = word(text)?;
     Ok(MithraVal::Atomic(atom))
 }
 
-fn parse_string(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_string(text: &mut Text) -> Result<MithraVal, MithraError> {
     let string = any_string(text)?;
     Ok(MithraVal::String(string))
 }
 
-fn parse_function_call(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_function_call(text: &mut Text) -> Result<MithraVal, MithraError> {
     let function_name = word(text)?;
     skip_spaces()(text)?;
     parse_char('(')(text)?;
     let args = comma_sep_exprs()(text)?;
-
-    parse_char(')')(text).map_err(|_| {
-        unterminated_func_call_err(&function_name, text.line_num(), text.inline_position())
+    parse_char(')')(text).map_err(|err| match err {
+        MithraError::ParseError(msg, line_num, inline_pos) => {
+            MithraError::ParseError(msg, line_num, inline_pos)
+        }
+        _ => unterminated_func_call_err(&function_name, text.line_num(), text.inline_position()),
     })?;
-
     Ok(MithraVal::List(vec![
         MithraVal::Atomic(function_name),
         MithraVal::List(args),
     ]))
 }
 
-fn parse_list(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_list(text: &mut Text) -> Result<MithraVal, MithraError> {
     parse_char('[')(text)?;
     let exprs = comma_sep_exprs()(text)?;
-    parse_char(']')(text)
-        .map_err(|_| unterminated_list_err(text.line_num(), text.inline_position()))?;
+    parse_char(']')(text).map_err(|err| match err {
+        MithraError::ParseError(msg, line_num, inline_pos) => {
+            MithraError::ParseError(msg, line_num, inline_pos)
+        }
+        _ => unterminated_list_err(text.line_num(), text.inline_position()),
+    })?;
     Ok(MithraVal::List(exprs))
 }
 
-fn parse_dict(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_dict(text: &mut Text) -> Result<MithraVal, MithraError> {
     fn parse_kv_pair(text: &mut Text) -> Result<(String, MithraVal), MithraError> {
         skip_spaces()(text)?;
         let key = any_string(text)?;
@@ -140,8 +150,12 @@ fn parse_dict(text: &mut Text) -> Result<MithraVal, MithraError> {
     let parse_kv_pair = run_parser(Box::new(parse_kv_pair));
     parse_char('{')(text)?;
     let mut kv_pairs = sep_by(Box::new(parse_kv_pair), parse_char(','))(text)?;
-    parse_char('}')(text)
-        .map_err(|_| unterminated_dictionary_err(text.line_num(), text.inline_position()))?;
+    parse_char('}')(text).map_err(|err| match err {
+        MithraError::ParseError(msg, line_num, inline_pos) => {
+            MithraError::ParseError(msg, line_num, inline_pos)
+        }
+        _ => unterminated_dictionary_err(text.line_num(), text.inline_position()),
+    })?;
     let mut dictionary = BTreeMap::new();
     loop {
         match kv_pairs.pop() {
@@ -154,7 +168,7 @@ fn parse_dict(text: &mut Text) -> Result<MithraVal, MithraError> {
     Ok(MithraVal::Dict(dictionary))
 }
 
-fn parse_expr(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_expr(text: &mut Text) -> Result<MithraVal, MithraError> {
     let parsers: [FnMithraParser; 9] = [
         parse_bool,
         parse_null,
@@ -180,7 +194,7 @@ fn parse_expr(text: &mut Text) -> Result<MithraVal, MithraError> {
     Err(nothing_parsed_err(text.line_num(), text.inline_position()))
 }
 
-fn parse_return_statement(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_return_statement(text: &mut Text) -> Result<MithraVal, MithraError> {
     let return_chars = format!("return").chars().collect();
     let return_parsed = string(return_chars)(text)?;
     skip_spaces()(text)?;
@@ -196,7 +210,7 @@ fn parse_return_statement(text: &mut Text) -> Result<MithraVal, MithraError> {
     ]))
 }
 
-fn parse_assignment(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_assignment(text: &mut Text) -> Result<MithraVal, MithraError> {
     let varname = parse_atom(text)?;
     skip_spaces()(text)?;
     parse_char('=')(text)?;
@@ -214,14 +228,14 @@ fn parse_assignment(text: &mut Text) -> Result<MithraVal, MithraError> {
     ]))
 }
 
-fn parse_empty_line(text: &mut Text) -> Result<MithraVal, MithraError> {
+pub fn parse_empty_line(text: &mut Text) -> Result<MithraVal, MithraError> {
     skip_spaces()(text)?;
     parse_char('\n')(text)?;
     Ok(MithraVal::Null)
 }
 
 // Parser function factories
-fn parse_empty_lines() -> ClosureParser<Vec<MithraVal>> {
+pub fn parse_empty_lines() -> ClosureParser<Vec<MithraVal>> {
     Box::new(
         move |text: &mut Text| -> Result<Vec<MithraVal>, MithraError> {
             many(run_parser(Box::new(parse_empty_line)))(text)
@@ -229,14 +243,14 @@ fn parse_empty_lines() -> ClosureParser<Vec<MithraVal>> {
     )
 }
 
-fn parse_char(c: char) -> ClosureMithraParser {
+pub fn parse_char(c: char) -> ClosureMithraParser {
     let parser = Box::new(move |text: &mut Text| -> Result<MithraVal, MithraError> {
         Ok(MithraVal::Char(char(c)(text)?))
     });
     run_parser(parser)
 }
 
-fn skip_spaces() -> ClosureMithraParser {
+pub fn skip_spaces() -> ClosureMithraParser {
     let parser = Box::new(move |text: &mut Text| -> Result<MithraVal, MithraError> {
         skip_many(vec![' '])(text)?;
         Ok(MithraVal::Null)
@@ -244,7 +258,7 @@ fn skip_spaces() -> ClosureMithraParser {
     run_parser(parser)
 }
 
-fn inline_expr() -> ClosureParser<MithraVal> {
+pub fn inline_expr() -> ClosureParser<MithraVal> {
     fn first_non_null(items: &mut Vec<MithraVal>) -> MithraVal {
         loop {
             match items.pop() {
@@ -261,11 +275,11 @@ fn inline_expr() -> ClosureParser<MithraVal> {
     )
 }
 
-fn comma_sep_exprs() -> ClosureParser<Vec<MithraVal>> {
+pub fn comma_sep_exprs() -> ClosureParser<Vec<MithraVal>> {
     sep_by(inline_expr(), parse_char(','))
 }
 
-fn inline_word() -> ClosureParser<String> {
+pub fn inline_word() -> ClosureParser<String> {
     fn first_non_empty_string(items: &mut Vec<String>) -> String {
         loop {
             match items.pop() {
@@ -285,11 +299,11 @@ fn inline_word() -> ClosureParser<String> {
     )
 }
 
-fn comma_sep_words() -> ClosureParser<Vec<String>> {
+pub fn comma_sep_words() -> ClosureParser<Vec<String>> {
     sep_by(inline_word(), parse_char(','))
 }
 
-fn parse_indentation(indent: usize, error_on_failure: bool) -> ClosureMithraParser {
+pub fn parse_indentation(indent: usize, error_on_failure: bool) -> ClosureMithraParser {
     let parser = Box::new(move |text: &mut Text| -> Result<MithraVal, MithraError> {
         let indent_chars = match indent {
             0 => Vec::new(),
@@ -314,7 +328,7 @@ fn parse_indentation(indent: usize, error_on_failure: bool) -> ClosureMithraPars
     run_parser(parser)
 }
 
-fn parse_inline_expr(indent: usize, force_indentation: bool) -> ClosureMithraParser {
+pub fn parse_inline_expr(indent: usize, force_indentation: bool) -> ClosureMithraParser {
     let parser = Box::new(move |text: &mut Text| -> Result<MithraVal, MithraError> {
         // check if text has been consumed
         if text.get_next().is_none() {
@@ -484,8 +498,12 @@ pub fn parse_function(indent: usize) -> ClosureMithraParser {
         // parse function name
         parse_char(' ')(text)?;
         skip_spaces()(text)?;
-        let function_name = word(text)
-            .map_err(|_| missing_function_name_err(text.line_num(), text.inline_position()))?;
+        let function_name = word(text).map_err(|err| match err {
+            MithraError::ParseError(msg, line_num, inline_pos) => {
+                MithraError::ParseError(msg, line_num, inline_pos)
+            }
+            _ => missing_function_name_err(text.line_num(), text.inline_position()),
+        })?;
         skip_spaces()(text)?;
         // parse '('
         parse_char('(')(text).map_err(|_| {
@@ -496,7 +514,7 @@ pub fn parse_function(indent: usize) -> ClosureMithraParser {
             .map_err(|_| missing_function_args_err(text.line_num(), text.inline_position()))?;
         // parse ')'
         parse_char(')')(text).map_err(|_| {
-            missing_close_parenthesis_before_func_args_err(text.line_num(), text.inline_position())
+            missing_close_parenthesis_after_func_args_err(text.line_num(), text.inline_position())
         })?;
         // parse ':'
         parse_char(':')(text).map_err(|_| {

@@ -32,8 +32,8 @@ pub enum MithraVal {
 #[derive(Debug, PartialEq)]
 pub enum MithraError {
     TextConsumed,                                 // error when entire raw text is consumed
-    NothingParsed(LineNum, InlinePointer),        // recoverable parsing error
-    ParseError(String, LineNum, InlinePointer),   // non-recoverable parsing error with error context
+    NothingParsed(LineNum, InlinePointer),        // recoverable generic parsing error
+    ParseError(String, LineNum, InlinePointer), // non-recoverable parsing error with error context
     RuntimeError(String, LineNum, InlinePointer), // runtime error
 }
 

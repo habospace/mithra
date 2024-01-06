@@ -7,7 +7,7 @@ use super::errors::reserved_word_err;
 use super::errors::unterminated_string_err;
 
 lazy_static! {
-    static ref RESERVED_WORDS: Vec<String> = vec![
+    pub static ref RESERVED_WORDS: Vec<String> = vec![
         String::from("else"),
         String::from("if"),
         String::from("return"),

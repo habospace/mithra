@@ -29,16 +29,16 @@ fn main() {
                         println!("Succesfully parsed '.mt' file: {:?}", exprs)
                     }
                     Err(err) => {
-                        println!("Failed to parse '.mt' file: {:?}", err)
+                        println!("Failed to parse '.mth' file: {:?}", err)
                     }
                 }
             }
             Err(err) => {
-                println!("Couldn't turn '.mt' file to chars: {:?}", err)
+                println!("Couldn't turn '.mth' file to chars: {:?}", err)
             }
         },
         None => {
-            println!("Please specify a '.mt' script in command line args.")
+            println!("Please specify a '.mth' script in command line args.")
         }
     }
 }

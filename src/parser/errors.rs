@@ -170,7 +170,7 @@ pub fn missing_function_args_err(line_num: LineNum, inline_position: InlinePoint
     )
 }
 
-pub fn missing_close_parenthesis_before_func_args_err(
+pub fn missing_close_parenthesis_after_func_args_err(
     line_num: LineNum,
     inline_position: InlinePointer,
 ) -> MithraError {
