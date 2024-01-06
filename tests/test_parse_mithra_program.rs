@@ -602,8 +602,5 @@ pub fn test_parse_mithra_program() {
         let mut text = Text::new(chars);
         mithra_parsers::parse_inline_exprs(0)(&mut text).unwrap()
     }
-    assert_eq!(
-        expected_mithra_program(),
-        actual_mithra_program()
-    )
+    assert_eq!(expected_mithra_program(), actual_mithra_program())
 }

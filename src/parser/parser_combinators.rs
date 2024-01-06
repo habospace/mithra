@@ -4,7 +4,7 @@ use crate::data::ClosureParser;
 use crate::data::MithraError;
 use crate::data::Text;
 
-use super::errors::unnecessary_sep_char_err;
+use super::errors::unnecessary_separator_err;
 
 pub fn run_parser<T: 'static>(parser: ClosureParser<T>) -> ClosureParser<T> {
     Box::new(move |text: &mut Text| -> Result<T, MithraError> {
@@ -61,7 +61,7 @@ where
                 MithraError::ParseError(msg, line_num, inline_pos) => {
                     MithraError::ParseError(msg, line_num, inline_pos)
                 }
-                _ => unnecessary_sep_char_err(text.line_num(), text.inline_position()),
+                _ => unnecessary_separator_err(text.line_num(), text.inline_position()),
             })?;
             results.push(next);
         }

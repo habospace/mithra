@@ -149,7 +149,7 @@ pub fn parse_dict(text: &mut Text) -> Result<MithraVal, MithraError> {
     }
     let parse_kv_pair = run_parser(Box::new(parse_kv_pair));
     parse_char('{')(text)?;
-    let mut kv_pairs = sep_by(Box::new(parse_kv_pair), parse_char(','))(text)?;
+    let mut kv_pairs = sep_by(parse_kv_pair, parse_char(','))(text)?;
     parse_char('}')(text).map_err(|err| match err {
         MithraError::ParseError(msg, line_num, inline_pos) => {
             MithraError::ParseError(msg, line_num, inline_pos)
@@ -236,11 +236,7 @@ pub fn parse_empty_line(text: &mut Text) -> Result<MithraVal, MithraError> {
 
 // Parser function factories
 pub fn parse_empty_lines() -> ClosureParser<Vec<MithraVal>> {
-    Box::new(
-        move |text: &mut Text| -> Result<Vec<MithraVal>, MithraError> {
-            many(run_parser(Box::new(parse_empty_line)))(text)
-        },
-    )
+    many(run_parser(Box::new(parse_empty_line)))
 }
 
 pub fn parse_char(c: char) -> ClosureMithraParser {
@@ -389,11 +385,7 @@ pub fn parse_inline_expr(indent: usize, force_indentation: bool) -> ClosureMithr
 }
 
 pub fn parse_inline_exprs(indent: usize) -> ClosureParser<Vec<MithraVal>> {
-    Box::new(
-        move |text: &mut Text| -> Result<Vec<MithraVal>, MithraError> {
-            many(parse_inline_expr(indent, false))(text)
-        },
-    )
+    many(parse_inline_expr(indent, false))
 }
 
 pub fn parse_if_block(indent: usize) -> ClosureMithraParser {

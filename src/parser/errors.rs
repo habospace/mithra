@@ -192,7 +192,7 @@ pub fn missing_colon_in_function_definition_line_err(
     )
 }
 
-pub fn unnecessary_sep_char_err(line_num: LineNum, inline_position: InlinePointer) -> MithraError {
+pub fn unnecessary_separator_err(line_num: LineNum, inline_position: InlinePointer) -> MithraError {
     MithraError::ParseError(format!("unnecessary ','",), line_num, inline_position)
 }
 

@@ -64,16 +64,10 @@ impl error::Error for MithraError {}
 
 #[derive(Debug)]
 pub struct Text {
-    // raw chars and pointers
     chars: Vec<char>,
     pub pointer: Pointer,
-    // datastructures to keep track of
-    // where we are in terms of line number
-    // and inline position for error messages
     pointer_to_line_num: BTreeMap<Pointer, LineNum>,
     pointer_to_inline_position: BTreeMap<Pointer, InlinePointer>,
-    // save final line number and inline position
-    // in case we error on final character
     final_char_line_num: LineNum,
     final_char_inline_positon: InlinePointer,
 }
@@ -91,7 +85,7 @@ impl Text {
         let mut final_char_inline_positon: InlinePointer = 0;
         // append closing newline to the end of script
         chars.push('\n');
-        // fill up line number and inline_position maps
+        // fill up line number and inline position maps
         for (i, &c) in chars.iter().enumerate() {
             pointer_to_line_num.insert(i, line_num);
             pointer_to_inline_position.insert(i, inline_position);
