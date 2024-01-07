@@ -77,12 +77,9 @@ impl Text {
         let mut chars = chars.clone();
         let mut line_num: LineNum = 1;
         let mut inline_position: InlinePointer = 1;
-
         let mut pointer_to_line_num = BTreeMap::new();
         let mut pointer_to_inline_position = BTreeMap::new();
 
-        let mut final_char_line_num: LineNum = 0;
-        let mut final_char_inline_positon: InlinePointer = 0;
         // append closing newline to the end of script
         chars.push('\n');
         // fill up line number and inline position maps
@@ -96,26 +93,17 @@ impl Text {
             }
         }
         // get final line number
-        match pointer_to_line_num.get(&(chars.len() - 1)) {
-            Some(line_num) => {
-                final_char_line_num = *line_num;
-            }
-            None => {}
-        }
-        // get final inline position
-        match pointer_to_inline_position.get(&(chars.len() - 1)) {
-            Some(inline_pos) => {
-                final_char_inline_positon = *inline_pos;
-            }
-            None => {}
-        }
+        let final_char_line_num = *pointer_to_line_num.get(&(chars.len() - 1)).unwrap_or(&0);
+        let final_char_inline_positon = *pointer_to_inline_position
+            .get(&(chars.len() - 1))
+            .unwrap_or(&0);
         Text {
-            chars: chars,
+            chars,
             pointer: 0,
-            pointer_to_line_num: pointer_to_line_num,
-            pointer_to_inline_position: pointer_to_inline_position,
-            final_char_line_num: final_char_line_num,
-            final_char_inline_positon: final_char_inline_positon,
+            pointer_to_line_num,
+            pointer_to_inline_position,
+            final_char_line_num,
+            final_char_inline_positon,
         }
     }
 
@@ -131,29 +119,29 @@ impl Text {
     }
 
     pub fn line_num(&self) -> LineNum {
-        match self.pointer_to_line_num.get(&self.pointer) {
-            Some(line_num) => *line_num,
-            None => {
+        *self
+            .pointer_to_line_num
+            .get(&self.pointer)
+            .unwrap_or_else(|| {
                 if self.pointer >= self.chars.len() {
-                    self.final_char_line_num
+                    &self.final_char_line_num
                 } else {
-                    0
+                    &0
                 }
-            }
-        }
+            })
     }
 
     pub fn inline_position(&self) -> InlinePointer {
-        match self.pointer_to_inline_position.get(&self.pointer) {
-            Some(inline_pos) => *inline_pos,
-            None => {
+        *self
+            .pointer_to_inline_position
+            .get(&self.pointer)
+            .unwrap_or_else(|| {
                 if self.pointer >= self.chars.len() {
-                    self.final_char_inline_positon
+                    &self.final_char_inline_positon
                 } else {
-                    0
+                    &0
                 }
-            }
-        }
+            })
     }
 }
 
