@@ -159,8 +159,8 @@ pub fn parse_dict(text: &mut Text) -> Result<MithraVal, MithraError> {
     let mut dictionary = BTreeMap::new();
     loop {
         match kv_pairs.pop() {
-            Some(kv_pair) => {
-                dictionary.insert(kv_pair.0, kv_pair.1);
+            Some((k, v)) => {
+                dictionary.insert(k, v);
             }
             None => break,
         }
