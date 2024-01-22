@@ -3,7 +3,7 @@ use std::error;
 use std::fmt;
 use std::usize;
 
-type Pointer = usize;
+pub type Pointer = usize;
 pub type LineNum = usize;
 pub type InlinePointer = usize;
 
