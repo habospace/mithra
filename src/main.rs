@@ -1,4 +1,5 @@
 mod data;
+mod evaluator;
 mod parser;
 
 use data::Text;
