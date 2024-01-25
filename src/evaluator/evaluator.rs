@@ -59,6 +59,24 @@ fn maybe_eval_return_expr(
     Ok(None)
 }
 
-fn eval(expr: MithraVal, program: &mut Program) -> Result<(), MithraError> {
-    Ok(())
+fn eval(expr: MithraVal, program: &mut Program) -> Result<MithraVal, MithraError> {
+    match expr {
+        MithraVal::Null => {
+            return Ok(MithraVal::Null);
+        }
+        MithraVal::Int(val) => {
+            return Ok(MithraVal::Int(val));
+        }
+        MithraVal::Float(val) => {
+            return Ok(MithraVal::Float(val));
+        }
+        MithraVal::Char(val) => {
+            return Ok(MithraVal::Char(val));
+        }
+        MithraVal::String(val) => {
+            return Ok(MithraVal::String(val));
+        }
+        MithraVal::Bool(val) => return Ok(MithraVal::Bool(val)),
+        _ => Ok(MithraVal::Null),
+    }
 }
