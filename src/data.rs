@@ -14,26 +14,60 @@ pub struct Function {
     pub body: Vec<MithraVal>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionCall {
+    pub function_name: String,
+    pub args: Vec<MithraVal>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Assignment {
+    pub var_name: String,
+    pub expr: Box<MithraVal>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReturnStatement {
+    pub expr: Box<MithraVal>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IfBlock {
+    pub predicate_expr: Box<MithraVal>,
+    pub exprs: Vec<MithraVal>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IfElseBlock {
+    pub if_block: IfBlock,
+    pub else_exprs: Vec<MithraVal>,
+}
+
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum MithraVal {
     Null,
-    Atomic(String),
-    List(Vec<MithraVal>),
-    Dict(BTreeMap<String, MithraVal>),
     Int(i64),
     Float(f64),
     String(String),
     Char(char),
     Bool(bool),
-    Function(Function),
+    Variable(LineNum, String),
+    List(LineNum, Vec<MithraVal>),
+    Dict(LineNum, BTreeMap<String, MithraVal>),
+    Function(LineNum, Function),
+    FunctionCall(LineNum, FunctionCall),
+    Assignment(LineNum, Assignment),
+    ReturnStatement(LineNum, ReturnStatement),
+    IfBlock(LineNum, IfBlock),
+    IfElseBlock(LineNum, IfElseBlock),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum MithraError {
     TextConsumed,                                 // error when entire raw text is consumed
     NothingParsed(LineNum, InlinePointer),        // recoverable generic parsing error
-    ParseError(String, LineNum, InlinePointer),   // non-recoverable parsing error with error context
+    ParseError(String, LineNum, InlinePointer), // non-recoverable parsing error with error context
     RuntimeError(String, LineNum, InlinePointer), // runtime error
 }
 
