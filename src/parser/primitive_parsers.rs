@@ -8,13 +8,13 @@ use super::errors::unterminated_string_err;
 
 lazy_static! {
     pub static ref RESERVED_WORDS: Vec<String> = vec![
-        String::from("else"),
-        String::from("if"),
-        String::from("return"),
-        String::from("def"),
-        String::from("None"),
-        String::from("True"),
-        String::from("False"),
+        format!("else"),
+        format!("if"),
+        format!("return"),
+        format!("def"),
+        format!("None"),
+        format!("True"),
+        format!("False"),
     ];
 }
 
