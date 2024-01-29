@@ -7,45 +7,25 @@ pub type Pointer = usize;
 pub type LineNum = usize;
 pub type InlinePointer = usize;
 
+pub type FunctionName = String;
+pub type CallArgs = Vec<MithraVal>;
+pub type VarName = String;
+pub type Expression = Box<MithraVal>;
+pub type PredicateExpression = Box<MithraVal>;
+pub type IfExpressions = Vec<MithraVal>;
+pub type ElseExpressions = Vec<MithraVal>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: String,
-    pub params: Vec<String>,
-    pub body: Vec<MithraVal>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct FunctionCall {
-    pub function_name: String,
-    pub args: Vec<MithraVal>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Assignment {
-    pub var_name: String,
-    pub expr: Box<MithraVal>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ReturnStatement {
-    pub expr: Box<MithraVal>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct IfBlock {
-    pub predicate_expr: Box<MithraVal>,
+    pub args: Vec<String>,
     pub exprs: Vec<MithraVal>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct IfElseBlock {
-    pub if_block: IfBlock,
-    pub else_exprs: Vec<MithraVal>,
 }
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum MithraVal {
+    Pass,
     Null,
     Int(i64),
     Float(f64),
@@ -56,19 +36,19 @@ pub enum MithraVal {
     List(LineNum, Vec<MithraVal>),
     Dict(LineNum, BTreeMap<String, MithraVal>),
     Function(LineNum, Function),
-    FunctionCall(LineNum, FunctionCall),
-    Assignment(LineNum, Assignment),
-    ReturnStatement(LineNum, ReturnStatement),
-    IfBlock(LineNum, IfBlock),
-    IfElseBlock(LineNum, IfElseBlock),
+    FunctionCall(LineNum, FunctionName, CallArgs),
+    Assignment(LineNum, VarName, Expression),
+    ReturnStatement(LineNum, Expression),
+    IfBlock(LineNum, PredicateExpression, IfExpressions),
+    IfElseBlock(LineNum, PredicateExpression, IfExpressions, ElseExpressions),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum MithraError {
-    TextConsumed,                                 // error when entire raw text is consumed
-    NothingParsed(LineNum, InlinePointer),        // recoverable generic parsing error
+    TextConsumed,                               // error when entire raw text is consumed
+    NothingParsed(LineNum, InlinePointer),      // recoverable generic parsing error
     ParseError(String, LineNum, InlinePointer), // non-recoverable parsing error with error context
-    RuntimeError(String, LineNum, InlinePointer), // runtime error
+    RuntimeError(String, LineNum),              // runtime error
 }
 
 impl fmt::Display for MithraError {
@@ -85,11 +65,9 @@ impl fmt::Display for MithraError {
                 "ParseError: {} (line: {}, char: {}).",
                 message, line_num, inline_pos
             ),
-            MithraError::RuntimeError(message, line_num, inline_pointer) => write!(
-                f,
-                "RuntimeError: {} (line: {}, char: {}).",
-                message, line_num, inline_pointer
-            ),
+            MithraError::RuntimeError(message, line_num) => {
+                write!(f, "RuntimeError: {} (line: {}).", message, line_num)
+            }
         }
     }
 }
