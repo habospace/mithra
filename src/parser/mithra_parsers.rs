@@ -2,15 +2,10 @@ use std::collections::BTreeMap;
 use std::num::ParseFloatError;
 use std::num::ParseIntError;
 
-use crate::data::Assignment;
 use crate::data::ClosureParser;
 use crate::data::FnParser;
-use crate::data::Function;
-use crate::data::FunctionCall;
-use crate::data::IfBlock;
-use crate::data::IfElseBlock;
-use crate::data::ReturnStatement;
 
+use crate::data::Function;
 use crate::data::MithraError;
 use crate::data::MithraVal;
 use crate::data::Text;
@@ -126,10 +121,8 @@ pub fn parse_function_call(text: &mut Text) -> Result<MithraVal, MithraError> {
     })?;
     Ok(MithraVal::FunctionCall(
         text.line_num(),
-        FunctionCall {
-            function_name,
-            args,
-        },
+        function_name,
+        args,
     ))
 }
 
@@ -205,7 +198,7 @@ pub fn parse_expr(text: &mut Text) -> Result<MithraVal, MithraError> {
 
 pub fn parse_return_statement(text: &mut Text) -> Result<MithraVal, MithraError> {
     let return_chars = format!("return").chars().collect();
-    let return_parsed = string(return_chars)(text)?;
+    string(return_chars)(text)?;
     skip_spaces()(text)?;
     let expr = parse_expr(text).map_err(|err| match err {
         MithraError::ParseError(msg, line_num, inline_pos) => {
@@ -213,12 +206,7 @@ pub fn parse_return_statement(text: &mut Text) -> Result<MithraVal, MithraError>
         }
         _ => missing_return_expr_err(text.line_num(), text.inline_position()),
     })?;
-    Ok(MithraVal::ReturnStatement(
-        text.line_num(),
-        ReturnStatement {
-            expr: Box::new(expr),
-        },
-    ))
+    Ok(MithraVal::ReturnStatement(text.line_num(), Box::new(expr)))
 }
 
 pub fn parse_assignment(text: &mut Text) -> Result<MithraVal, MithraError> {
@@ -234,10 +222,8 @@ pub fn parse_assignment(text: &mut Text) -> Result<MithraVal, MithraError> {
     })?;
     Ok(MithraVal::Assignment(
         text.line_num(),
-        Assignment {
-            var_name: var_name,
-            expr: Box::new(expr),
-        },
+        var_name,
+        Box::new(expr),
     ))
 }
 
@@ -401,63 +387,65 @@ pub fn parse_inline_exprs(indent: usize) -> ClosureParser<Vec<MithraVal>> {
     many(parse_inline_expr(indent, false))
 }
 
-pub fn parse_if_block_impl(indent: usize) -> ClosureParser<IfBlock> {
-    let parser = Box::new(move |text: &mut Text| -> Result<IfBlock, MithraError> {
-        // parse 'if'
-        let if_chars = format!("if").chars().collect();
-        string(if_chars)(text)?;
-        parse_char(' ')(text)?;
-        skip_spaces()(text)?;
-        // parse predicate expression
-        let predicate = parse_expr(text).map_err(|err| match err {
-            MithraError::ParseError(msg, line_num, inline_pos) => {
-                MithraError::ParseError(msg, line_num, inline_pos)
-            }
-            _ => missing_predicate_expr_err(text.line_num(), text.inline_position()),
-        })?;
-        skip_spaces()(text)?;
-        // parse ':' after predicate expression
-        parse_char(':')(text).map_err(|_| {
-            missing_colon_after_predicate_expr_err(text.line_num(), text.inline_position())
-        })?;
+pub fn parse_if_block_impl(indent: usize) -> ClosureParser<(Box<MithraVal>, Vec<MithraVal>)> {
+    let parser = Box::new(
+        move |text: &mut Text| -> Result<(Box<MithraVal>, Vec<MithraVal>), MithraError> {
+            // parse 'if'
+            let if_chars = format!("if").chars().collect();
+            string(if_chars)(text)?;
+            parse_char(' ')(text)?;
+            skip_spaces()(text)?;
+            // parse predicate expression
+            let predicate = parse_expr(text).map_err(|err| match err {
+                MithraError::ParseError(msg, line_num, inline_pos) => {
+                    MithraError::ParseError(msg, line_num, inline_pos)
+                }
+                _ => missing_predicate_expr_err(text.line_num(), text.inline_position()),
+            })?;
+            skip_spaces()(text)?;
+            // parse ':' after predicate expression
+            parse_char(':')(text).map_err(|_| {
+                missing_colon_after_predicate_expr_err(text.line_num(), text.inline_position())
+            })?;
 
-        parse_empty_lines()(text)?;
-        // parse mandatory first 'if' expression
-        let first_if_expr = parse_inline_expr(indent + 1, true)(text).map_err(|err| match err {
-            MithraError::ParseError(msg, line_num, inline_pos) => {
-                MithraError::ParseError(msg, line_num, inline_pos)
+            parse_empty_lines()(text)?;
+            // parse mandatory first 'if' expression
+            let first_if_expr =
+                parse_inline_expr(indent + 1, true)(text).map_err(|err| match err {
+                    MithraError::ParseError(msg, line_num, inline_pos) => {
+                        MithraError::ParseError(msg, line_num, inline_pos)
+                    }
+                    _ => missing_mandatory_if_expr_err(text.line_num(), text.inline_position()),
+                })?;
+            // set up var for storing components of the 'if-else' block
+            let mut if_exprs = Vec::new();
+            // parse rest of expressions in 'if' block
+            let tail_if_exprs = parse_inline_exprs(indent + 1)(text);
+            match tail_if_exprs {
+                Ok(exprs) => {
+                    if_exprs.push(first_if_expr);
+                    if_exprs.extend(exprs);
+                }
+                Err(MithraError::ParseError(msg, line_num, inline_pos)) => {
+                    return Err(MithraError::ParseError(msg, line_num, inline_pos));
+                }
+                Err(_) => {
+                    if_exprs.push(first_if_expr);
+                }
             }
-            _ => missing_mandatory_if_expr_err(text.line_num(), text.inline_position()),
-        })?;
-        // set up var for storing components of the 'if-else' block
-        let mut if_exprs = Vec::new();
-        // parse rest of expressions in 'if' block
-        let tail_if_exprs = parse_inline_exprs(indent + 1)(text);
-        match tail_if_exprs {
-            Ok(mut exprs) => {
-                if_exprs.push(first_if_expr);
-                if_exprs.extend(exprs);
-            }
-            Err(MithraError::ParseError(msg, line_num, inline_pos)) => {
-                return Err(MithraError::ParseError(msg, line_num, inline_pos));
-            }
-            Err(_) => {
-                if_exprs.push(first_if_expr);
-            }
-        }
-        Ok(IfBlock {
-            predicate_expr: Box::new(predicate),
-            exprs: if_exprs,
-        })
-    });
+            Ok((Box::new(predicate), if_exprs))
+        },
+    );
     run_parser(parser)
 }
 
 pub fn parse_if_block(indent: usize) -> ClosureMithraParser {
     Box::new(move |text: &mut Text| -> Result<MithraVal, MithraError> {
+        let (predicate_expr, if_exprs) = parse_if_block_impl(indent)(text)?;
         Ok(MithraVal::IfBlock(
             text.line_num(),
-            parse_if_block_impl(indent)(text)?,
+            predicate_expr,
+            if_exprs,
         ))
     })
 }
@@ -465,7 +453,7 @@ pub fn parse_if_block(indent: usize) -> ClosureMithraParser {
 pub fn parse_if_else_block(indent: usize) -> ClosureMithraParser {
     let parser = Box::new(move |text: &mut Text| -> Result<MithraVal, MithraError> {
         // parse 'if' block
-        let if_block = parse_if_block_impl(indent)(text)?;
+        let (predicate_expr, if_exprs) = parse_if_block_impl(indent)(text)?;
         parse_indentation(indent, false)(text)?;
         // parse 'else:' and return everything we parsed if we fail
         let else_chars = format!("else").chars().collect();
@@ -489,7 +477,7 @@ pub fn parse_if_else_block(indent: usize) -> ClosureMithraParser {
         let mut else_exprs = Vec::new();
         let tail_else_exprs = parse_inline_exprs(indent + 1)(text);
         match tail_else_exprs {
-            Ok(mut exprs) => {
+            Ok(exprs) => {
                 else_exprs.push(first_else_expr);
                 else_exprs.extend(exprs);
             }
@@ -502,10 +490,9 @@ pub fn parse_if_else_block(indent: usize) -> ClosureMithraParser {
         }
         Ok(MithraVal::IfElseBlock(
             text.line_num(),
-            IfElseBlock {
-                if_block: if_block,
-                else_exprs: else_exprs,
-            },
+            predicate_expr,
+            if_exprs,
+            else_exprs,
         ))
     });
     run_parser(parser)
@@ -519,7 +506,7 @@ pub fn parse_function(indent: usize) -> ClosureMithraParser {
         // parse function name
         parse_char(' ')(text)?;
         skip_spaces()(text)?;
-        let function_name = word(text).map_err(|err| match err {
+        let name = word(text).map_err(|err| match err {
             MithraError::ParseError(msg, line_num, inline_pos) => {
                 MithraError::ParseError(msg, line_num, inline_pos)
             }
@@ -547,7 +534,7 @@ pub fn parse_function(indent: usize) -> ClosureMithraParser {
             MithraError::ParseError(msg, line_num, inline_pos) => {
                 MithraError::ParseError(msg, line_num, inline_pos)
             }
-            _ => no_expr_in_function_err(&function_name, text.line_num(), text.inline_position()),
+            _ => no_expr_in_function_err(&name, text.line_num(), text.inline_position()),
         })?;
         // create container for function expressions
         let mut func_exprs = vec![first_expr];
@@ -560,12 +547,14 @@ pub fn parse_function(indent: usize) -> ClosureMithraParser {
             }
             Err(_) => {}
         }
-        let function = Function {
-            name: function_name,
-            params: args,
-            body: func_exprs,
-        };
-        Ok(MithraVal::Function(text.line_num(), function))
+        Ok(MithraVal::Function(
+            text.line_num(),
+            Function {
+                name: name,
+                args: args,
+                exprs: func_exprs,
+            },
+        ))
     });
     run_parser(parser)
 }
