@@ -27,3 +27,13 @@ pub fn incorrect_number_of_func_args_err(
         line_num,
     )
 }
+
+pub fn type_err(line_num: LineNum, func_name: &String, correct_types: &String) -> MithraError {
+    MithraError::RuntimeError(
+        format!(
+            "'{}' takes args of the following types: {}",
+            func_name, correct_types
+        ),
+        line_num,
+    )
+}

@@ -1,5 +1,6 @@
 use crate::data::Function;
 use crate::data::FunctionName;
+use crate::data::LineNum;
 use crate::data::MithraError;
 use crate::data::MithraVal;
 use crate::data::Pointer;
@@ -14,7 +15,7 @@ use super::errors::undefined_variable_err;
 use super::errors::variable_is_not_callable_err;
 
 type Memory = BTreeMap<String, MithraVal>;
-type DefaultFunction = fn(Vec<MithraVal>) -> Result<MithraVal, MithraError>;
+type DefaultFunction = fn(Vec<MithraVal>, LineNum) -> Result<MithraVal, MithraError>;
 
 #[derive(Clone)]
 enum Scope {
@@ -88,9 +89,7 @@ fn run(scope: Scope, program: &mut Program) -> Result<MithraVal> {
 
 fn maybe_eval_return_expr(expr: MithraVal, program: &mut Program) -> Result<Option<MithraVal>> {
     match expr {
-        MithraVal::ReturnStatement(_, expr) => {
-            Ok(Some(eval(*expr, program, Scope::Function)?))
-        }
+        MithraVal::ReturnStatement(_, expr) => Ok(Some(eval(*expr, program, Scope::Function)?)),
         _ => Ok(None),
     }
 }
@@ -152,8 +151,12 @@ fn eval(expr: MithraVal, program: &mut Program, scope: Scope) -> Result<MithraVa
             run(scope, &mut program.transfer_memory(chosen_exprs))
         }
         MithraVal::FunctionCall(line_num, func_name, call_args) => {
+            let mut evaluated_call_args = Vec::new();
+            for arg in call_args {
+                evaluated_call_args.push(eval(arg, program, scope)?);
+            }
             match program.get_default_func(&func_name) {
-                Some(function) => Ok(function(call_args)?),
+                Some(function) => Ok(function(evaluated_call_args, line_num)?),
                 None => {
                     let maybe_function = program
                         .get_memory(&func_name)
@@ -170,7 +173,7 @@ fn eval(expr: MithraVal, program: &mut Program, scope: Scope) -> Result<MithraVa
                                     n_call_args
                                 )))
                             } else {
-                                eval_user_defined_func(function, call_args, program)
+                                eval_user_defined_func(function, evaluated_call_args, program)
                             }
                         }
                         _ => Err(anyhow!(variable_is_not_callable_err(line_num, &func_name))),
@@ -186,9 +189,9 @@ fn eval_user_defined_func(
     call_args: Vec<MithraVal>,
     program: &mut Program,
 ) -> Result<MithraVal> {
-    let mut function_execution = program.transfer_memory(function.exprs);
+    let mut function_execution_program = program.transfer_memory(function.exprs);
     for (var_name, var_value) in function.args.iter().zip(call_args.iter()) {
-        function_execution.set_memory(var_name.to_string(), var_value.clone());
+        function_execution_program.set_memory(var_name.to_string(), var_value.clone());
     }
-    run(Scope::Function, &mut function_execution)
+    run(Scope::Function, &mut function_execution_program)
 }
