@@ -152,8 +152,8 @@ fn eval(expr: MithraVal, program: &mut Program, scope: Scope) -> Result<MithraVa
         }
         MithraVal::FunctionCall(line_num, func_name, call_args) => {
             let mut evaluated_call_args = Vec::new();
-            for arg in call_args {
-                evaluated_call_args.push(eval(arg, program, scope)?);
+            for arg in &call_args {
+                evaluated_call_args.push(eval(arg.clone(), program, scope.clone())?);
             }
             match program.get_default_func(&func_name) {
                 Some(function) => Ok(function(evaluated_call_args, line_num)?),
