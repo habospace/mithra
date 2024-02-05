@@ -3,6 +3,9 @@ mod evaluator;
 mod parser;
 
 use data::Text;
+use evaluator::evaluator::run;
+use evaluator::evaluator::Program;
+use evaluator::evaluator::Scope;
 use parser::mithra_parsers;
 use std::env;
 use std::fs::File;
@@ -29,7 +32,17 @@ fn main() {
     match mithra_parsers::parse_inline_exprs(0)(&mut Text::new(file_chars)) {
         Ok(exprs) => {
             println!("Succesfully parsed '.mt' file: {:?}", exprs);
-            process::exit(0);
+            let mut program = Program::new(exprs);
+            match run(Scope::Global, &mut program) {
+                Ok(_) => {
+                    println!("Program memory: {:?}", program.memory);
+                    process::exit(0);
+                }
+                Err(err) => {
+                    println!("Failed to run program, err: {:?}", err);
+                    process::exit(1);
+                }
+            }
         }
         Err(err) => {
             println!("Failed to parse '.mth' file: {:?}", err);

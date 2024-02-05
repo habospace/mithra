@@ -37,3 +37,7 @@ pub fn type_err(line_num: LineNum, func_name: &String, correct_types: &String) -
         line_num,
     )
 }
+
+pub fn value_err(line_num: LineNum, msg: String) -> MithraError {
+    MithraError::RuntimeError(format!("value error: {}", msg), line_num)
+}

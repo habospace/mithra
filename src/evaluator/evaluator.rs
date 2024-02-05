@@ -8,26 +8,52 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use super::errors::cant_return_in_global_scope_err;
 use super::errors::incorrect_number_of_func_args_err;
 use super::errors::undefined_variable_err;
 use super::errors::variable_is_not_callable_err;
 
-type Memory = BTreeMap<String, MithraVal>;
-type DefaultFunction = fn(Vec<MithraVal>, LineNum) -> Result<MithraVal, MithraError>;
+use super::default_functions::and;
+use super::default_functions::concat;
+use super::default_functions::cons;
+use super::default_functions::div;
+use super::default_functions::eqv;
+use super::default_functions::gt;
+use super::default_functions::gte;
+use super::default_functions::head;
+use super::default_functions::length;
+use super::default_functions::lt;
+use super::default_functions::lte;
+use super::default_functions::minus;
+use super::default_functions::mod_;
+use super::default_functions::mul;
+use super::default_functions::neqv;
+use super::default_functions::not;
+use super::default_functions::or;
+use super::default_functions::plus;
+use super::default_functions::range;
+use super::default_functions::split;
+use super::default_functions::tail;
+use super::default_functions::to_int;
+use super::default_functions::to_string;
+
+type Memory = HashMap<String, MithraVal>;
+
+type DefaultFunction = fn(Vec<MithraVal>, LineNum) -> Result<MithraVal>;
 
 #[derive(Clone)]
-enum Scope {
+pub enum Scope {
     Function,
     Global,
 }
 
-struct Program {
+pub struct Program {
     exprs: Vec<MithraVal>,
-    expr_pointer: Pointer,
-    memory: Memory,
-    default_funcs: BTreeMap<FunctionName, DefaultFunction>,
+    expr_pointer: usize,
+    pub memory: Memory,
+    default_funcs: HashMap<FunctionName, DefaultFunction>,
 }
 
 impl Program {
@@ -35,8 +61,32 @@ impl Program {
         Program {
             exprs: exprs,
             expr_pointer: 0,
-            memory: BTreeMap::new(),
-            default_funcs: BTreeMap::from([]),
+            memory: HashMap::new(),
+            default_funcs: HashMap::from([
+                (format!("plus"), plus as DefaultFunction),
+                (format!("minus"), minus as DefaultFunction),
+                (format!("mul"), mul as DefaultFunction),
+                (format!("div"), div as DefaultFunction),
+                (format!("mod"), mod_ as DefaultFunction),
+                (format!("eqv"), eqv as DefaultFunction),
+                (format!("neqv"), neqv as DefaultFunction),
+                (format!("lt"), lt as DefaultFunction),
+                (format!("gt"), gt as DefaultFunction),
+                (format!("gte"), gte as DefaultFunction),
+                (format!("lte"), lte as DefaultFunction),
+                (format!("or"), or as DefaultFunction),
+                (format!("and"), and as DefaultFunction),
+                (format!("not"), not as DefaultFunction),
+                (format!("head"), head as DefaultFunction),
+                (format!("tail"), tail as DefaultFunction),
+                (format!("concat"), concat as DefaultFunction),
+                (format!("len"), length as DefaultFunction),
+                (format!("to_string"), to_string as DefaultFunction),
+                (format!("to_int"), to_int as DefaultFunction),
+                (format!("range"), range as DefaultFunction),
+                (format!("split"), split as DefaultFunction),
+                (format!("cons"), cons as DefaultFunction),
+            ]),
         }
     }
     pub fn next_expr(&mut self) -> Option<MithraVal> {
@@ -62,7 +112,7 @@ impl Program {
     }
     pub fn transfer_memory(&mut self, exprs: Vec<MithraVal>) -> Program {
         Program {
-            exprs: exprs,
+            exprs,
             expr_pointer: 0,
             memory: self.memory.clone(),
             default_funcs: self.default_funcs.clone(),
@@ -70,7 +120,7 @@ impl Program {
     }
 }
 
-fn run(scope: Scope, program: &mut Program) -> Result<MithraVal> {
+pub fn run(scope: Scope, program: &mut Program) -> Result<MithraVal> {
     while let Some(expr) = program.next_expr() {
         match scope {
             Scope::Function => match maybe_eval_return_expr(expr.clone(), program)? {
