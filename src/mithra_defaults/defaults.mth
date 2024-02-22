@@ -1,0 +1,39 @@
+
+def filter(f, xs):
+    if eqv(len(xs), 0):
+        return []
+    head_ = head(xs)
+    tail_ = filter(f, tail(xs))
+    if f(head_):
+        return cons(head_, tail_)
+    else:
+        return tail_
+
+def map(f, xs):
+    if eqv(len(xs), 0):
+        return []
+    head_ = f(head(xs))
+    tail_ = map(f, tail(xs))
+    return cons(head_, tail_)
+
+def fold(f, acc, xs):
+    if eqv(len(xs), 0):
+        return acc
+    else:
+        head_ = head(xs)
+        tail_ = tail(xs)
+        return f(head_, fold(f, acc, tail_))
+
+def double(x):
+    return mul(x, 2)
+
+def even(x):
+    return eqv(mod(x, 2), 0)
+
+def add(x, y):
+    return plus(x, y)
+
+xs = [1, 2, 3, 4, 5]
+xs_even = filter(even, xs)
+xs_even_doubled = map(double, xs_even)
+xs_even_doubled_sum = fold(add, 0, xs_even_doubled)

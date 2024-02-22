@@ -1,20 +1,20 @@
-use crate::data::LineNum;
+#![allow(dead_code)]
 use crate::data::MithraError;
 
-pub fn undefined_variable_err(line_num: LineNum, var_name: &String) -> MithraError {
+pub fn undefined_variable_err(line_num: usize, var_name: &String) -> MithraError {
     MithraError::RuntimeError(format!("Variable '{}' is not defined", var_name), line_num)
 }
 
-pub fn cant_return_in_global_scope_err(line_num: LineNum) -> MithraError {
+pub fn cant_return_in_global_scope_err(line_num: usize) -> MithraError {
     MithraError::RuntimeError(format!("Can't return in global scope"), line_num)
 }
 
-pub fn variable_is_not_callable_err(line_num: LineNum, var_name: &String) -> MithraError {
+pub fn variable_is_not_callable_err(line_num: usize, var_name: &String) -> MithraError {
     MithraError::RuntimeError(format!("'{}' is not callable", var_name), line_num)
 }
 
 pub fn incorrect_number_of_func_args_err(
-    line_num: LineNum,
+    line_num: usize,
     func_name: &String,
     n_correct_args: usize,
     n_call_args: usize,
@@ -28,7 +28,7 @@ pub fn incorrect_number_of_func_args_err(
     )
 }
 
-pub fn type_err(line_num: LineNum, func_name: &String, correct_types: &String) -> MithraError {
+pub fn type_err(line_num: usize, func_name: &String, correct_types: &String) -> MithraError {
     MithraError::RuntimeError(
         format!(
             "'{}' takes args of the following types: {}",
@@ -38,6 +38,6 @@ pub fn type_err(line_num: LineNum, func_name: &String, correct_types: &String) -
     )
 }
 
-pub fn value_err(line_num: LineNum, msg: String) -> MithraError {
+pub fn value_err(line_num: usize, msg: String) -> MithraError {
     MithraError::RuntimeError(format!("value error: {}", msg), line_num)
 }

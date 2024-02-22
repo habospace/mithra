@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::error;
 use std::fmt;
+use std::fmt::Debug;
 use std::usize;
 
 pub type Pointer = usize;
@@ -43,6 +44,69 @@ pub enum MithraVal {
     IfElseBlock(LineNum, PredicateExpression, IfExpressions, ElseExpressions),
 }
 
+fn stringify_bool(val: &bool) -> String {
+    let binding = val.to_string();
+    let mut chars = binding.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + chars.as_str(),
+    }
+}
+
+fn stringify_list(list: &Vec<MithraVal>) -> String {
+    let mut stringified_list = String::from("[");
+    for (i, item) in list.iter().enumerate() {
+        stringified_list.push_str(&format!("{}", item));
+        if i < list.len() - 1 {
+            stringified_list.push_str(&format!(", "));
+        }
+    }
+    stringified_list.push(']');
+    stringified_list
+}
+
+fn stringify_dict(dict: &BTreeMap<String, MithraVal>) -> String {
+    let mut stringified_dict = String::from("{");
+    for (i, (k, v)) in dict.iter().enumerate() {
+        stringified_dict.push_str(&format!("\"{}\": {}", k, v));
+        if i < dict.len() - 1 {
+            stringified_dict.push_str(&format!(", "));
+        }
+    }
+    stringified_dict.push('}');
+    stringified_dict
+}
+
+impl fmt::Display for MithraVal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MithraVal::Pass => todo!(),
+            MithraVal::Null => write!(f, "None"),
+            MithraVal::Int(int) => write!(f, "{}", int),
+            MithraVal::Float(float) => write!(f, "{}", float),
+            MithraVal::String(string) => write!(f, "\"{}\"", string),
+            MithraVal::Char(char) => write!(f, "'{}'", char),
+            MithraVal::Bool(bool) => write!(f, "{}", stringify_bool(bool)),
+            MithraVal::List(_, list) => write!(f, "{}", stringify_list(list)),
+            MithraVal::Dict(_, dict) => write!(f, "{}", stringify_dict(dict)),
+            MithraVal::Function(
+                _,
+                Function {
+                    name,
+                    args,
+                    exprs: _,
+                },
+            ) => write!(f, "Function '{}', args: {:?}.", name, args),
+            MithraVal::Variable(_, _) => todo!(),
+            MithraVal::FunctionCall(_, _, _) => todo!(),
+            MithraVal::Assignment(_, _, _) => todo!(),
+            MithraVal::ReturnStatement(_, _) => todo!(),
+            MithraVal::IfBlock(_, _, _) => todo!(),
+            MithraVal::IfElseBlock(_, _, _, _) => todo!(),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum MithraError {
     TextConsumed,                               // error when entire raw text is consumed
@@ -77,18 +141,18 @@ impl error::Error for MithraError {}
 #[derive(Debug)]
 pub struct Text {
     chars: Vec<char>,
-    pub pointer: Pointer,
+    pub pointer: usize,
     pointer_to_line_num: BTreeMap<Pointer, LineNum>,
     pointer_to_inline_position: BTreeMap<Pointer, InlinePointer>,
-    final_char_line_num: LineNum,
-    final_char_inline_positon: InlinePointer,
+    final_char_line_num: usize,
+    final_char_inline_positon: usize,
 }
 
 impl Text {
     pub fn new(chars: Vec<char>) -> Text {
         let mut chars = chars.clone();
-        let mut line_num: LineNum = 1;
-        let mut inline_position: InlinePointer = 1;
+        let mut line_num: usize = 1;
+        let mut inline_position: usize = 1;
         let mut pointer_to_line_num = BTreeMap::new();
         let mut pointer_to_inline_position = BTreeMap::new();
 

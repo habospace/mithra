@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use super::errors::incorrect_number_of_func_args_err;
 use super::errors::type_err;
 use super::errors::value_err;
@@ -57,11 +58,11 @@ fn or_impl(a: bool, b: bool) -> bool {
     a || b
 }
 
-fn validate_single_arg(
-    args: Vec<MithraVal>,
-    func_name: &String,
+fn validate_single_arg<'a>(
+    args: &'a Vec<MithraVal>,
+    func_name: &'a String,
     line_num: usize,
-) -> Result<MithraVal> {
+) -> Result<&'a MithraVal> {
     if args.len() != 1 {
         return Err(anyhow!(incorrect_number_of_func_args_err(
             line_num,
@@ -71,14 +72,14 @@ fn validate_single_arg(
         )));
     }
     let first = args.get(0).unwrap();
-    Ok(first.clone())
+    Ok(first)
 }
 
-fn validate_two_args(
-    args: Vec<MithraVal>,
-    func_name: &String,
+fn validate_two_args<'a>(
+    args: &'a Vec<MithraVal>,
+    func_name: &'a String,
     line_num: usize,
-) -> Result<(MithraVal, MithraVal)> {
+) -> Result<(&'a MithraVal, &'a MithraVal)> {
     if args.len() != 2 {
         return Err(anyhow!(incorrect_number_of_func_args_err(
             line_num,
@@ -89,7 +90,7 @@ fn validate_two_args(
     }
     let first = args.get(0).unwrap();
     let second = args.get(1).unwrap();
-    Ok((first.clone(), second.clone()))
+    Ok((first, second))
 }
 
 fn int_numeric_binop(
@@ -206,7 +207,7 @@ fn bool_bool_binop(
     Err(anyhow!(type_err(0, &format!(""), &format!("(bool, bool)"))))
 }
 
-pub fn plus(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn plus(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("plus");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let int_result = int_numeric_binop(&a, &b, plus_impl);
@@ -223,7 +224,7 @@ pub fn plus(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn minus(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn minus(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("minus");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let int_result = int_numeric_binop(&a, &b, minus_impl);
@@ -240,7 +241,7 @@ pub fn minus(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn mul(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn mul(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("mul");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let int_result = int_numeric_binop(&a, &b, mul_impl);
@@ -257,7 +258,7 @@ pub fn mul(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn div(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn div(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("div");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let int_result = int_numeric_binop(&a, &b, div_impl);
@@ -274,7 +275,7 @@ pub fn div(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn mod_(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn mod_(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("mod");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let result = int_numeric_binop(&a, &b, mod_impl)
@@ -282,7 +283,7 @@ pub fn mod_(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn eqv(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn eqv(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("eqv");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let string_result = string_bool_binop(&a, &b, eqv_impl);
@@ -303,7 +304,7 @@ pub fn eqv(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn lt(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn lt(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("lt");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let string_result = string_bool_binop(&a, &b, lt_impl);
@@ -324,7 +325,7 @@ pub fn lt(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn gt(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn gt(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("gt");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let string_result = string_bool_binop(&a, &b, gt_impl);
@@ -345,7 +346,7 @@ pub fn gt(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn neqv(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn neqv(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("neqv");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let string_result = string_bool_binop(&a, &b, neqv_impl);
@@ -366,7 +367,7 @@ pub fn neqv(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn gte(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn gte(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("gte");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let string_result = string_bool_binop(&a, &b, gte_impl);
@@ -387,7 +388,7 @@ pub fn gte(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn lte(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn lte(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("lte");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     let string_result = string_bool_binop(&a, &b, lte_impl);
@@ -408,19 +409,19 @@ pub fn lte(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     Ok(result)
 }
 
-pub fn or(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn or(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("or");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     bool_bool_binop(&a, &b, or_impl)
 }
 
-pub fn and(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn and(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("or");
     let (a, b) = validate_two_args(args, &function_name, line_num)?;
     bool_bool_binop(&a, &b, and_impl)
 }
 
-pub fn not(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn not(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("or");
     let arg = validate_single_arg(args, &function_name, line_num)?;
     match arg {
@@ -433,7 +434,7 @@ pub fn not(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     }
 }
 
-pub fn head(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn head(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("head");
     let arg = validate_single_arg(args, &function_name, line_num)?;
     match arg {
@@ -452,7 +453,7 @@ pub fn head(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     }
 }
 
-pub fn tail(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn tail(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("tail");
     let arg = validate_single_arg(args, &function_name, line_num)?;
     match arg {
@@ -465,7 +466,7 @@ pub fn tail(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     }
 }
 
-pub fn concat(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn concat(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("concat");
     let (list1, list2) = validate_two_args(args, &function_name, line_num)?;
     match list1 {
@@ -486,7 +487,7 @@ pub fn concat(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     )))
 }
 
-pub fn length(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn length(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("length");
     let arg = validate_single_arg(args, &function_name, line_num)?;
     match arg {
@@ -499,7 +500,7 @@ pub fn length(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     }
 }
 
-pub fn to_string(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn to_string(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("to_string");
     let arg = validate_single_arg(args, &function_name, line_num)?;
     match arg {
@@ -513,7 +514,7 @@ pub fn to_string(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     }
 }
 
-pub fn to_int(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn to_int(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("to_string");
     let arg = validate_single_arg(args, &function_name, line_num)?;
     match arg {
@@ -532,7 +533,7 @@ pub fn to_int(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     }
 }
 
-pub fn take(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn take(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("take");
     let (int, list) = validate_two_args(args, &function_name, line_num)?;
     match int {
@@ -540,7 +541,7 @@ pub fn take(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
             MithraVal::List(_, list_vals) => {
                 return Ok(MithraVal::List(
                     line_num,
-                    (&list_vals[0..n as usize]).to_vec(),
+                    (&list_vals[0..*n as usize]).to_vec(),
                 ));
             }
             _ => {}
@@ -554,15 +555,15 @@ pub fn take(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     )))
 }
 
-pub fn range(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
-    let function_name = format!("generate_list");
+pub fn range(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+    let function_name = format!("range");
     let (start, end) = validate_two_args(args, &function_name, line_num)?;
     match start {
         MithraVal::Int(start_int) => match end {
             MithraVal::Int(end_int) => {
                 return Ok(MithraVal::List(
                     line_num,
-                    (start_int..=end_int).map(|x| MithraVal::Int(x)).collect(),
+                    (*start_int..=*end_int).map(|x| MithraVal::Int(x)).collect(),
                 ));
             }
             _ => {}
@@ -576,7 +577,7 @@ pub fn range(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     )))
 }
 
-pub fn split(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn split(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("split");
     let (string, split_string) = validate_two_args(args, &function_name, line_num)?;
     match string {
@@ -585,7 +586,7 @@ pub fn split(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
                 return Ok(MithraVal::List(
                     line_num,
                     string_val
-                        .split(&split_string_val)
+                        .split(split_string_val)
                         .map(|x| MithraVal::String(x.to_string()))
                         .collect(),
                 ));
@@ -601,38 +602,38 @@ pub fn split(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     )))
 }
 
-pub fn cons(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+pub fn cons(args: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
     let function_name = format!("cons");
     let (head, tail) = validate_two_args(args, &function_name, line_num)?;
+
+    fn cons_impl(head: &MithraVal, tail: &Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
+        let mut list_values = tail.clone();
+        list_values.insert(0, head.clone());
+        Ok(MithraVal::List(line_num, list_values))
+    }
+
     match tail {
-        MithraVal::List(_, mut list_values) => match head {
+        MithraVal::List(_, tail_list) => match head {
             MithraVal::Null => {
-                list_values.insert(0, head);
-                return Ok(MithraVal::List(line_num, list_values));
+                return cons_impl(head, tail_list, line_num);
             }
             MithraVal::Bool(_) => {
-                list_values.insert(0, head);
-                return Ok(MithraVal::List(line_num, list_values));
+                return cons_impl(head, tail_list, line_num);
             }
             MithraVal::Int(_) => {
-                list_values.insert(0, head);
-                return Ok(MithraVal::List(line_num, list_values));
+                return cons_impl(head, tail_list, line_num);
             }
             MithraVal::Float(_) => {
-                list_values.insert(0, head);
-                return Ok(MithraVal::List(line_num, list_values));
+                return cons_impl(head, tail_list, line_num);
             }
             MithraVal::String(_) => {
-                list_values.insert(0, head);
-                return Ok(MithraVal::List(line_num, list_values));
+                return cons_impl(head, tail_list, line_num);
             }
             MithraVal::List(_, _) => {
-                list_values.insert(0, head);
-                return Ok(MithraVal::List(line_num, list_values));
+                return cons_impl(head, tail_list, line_num);
             }
             MithraVal::Dict(_, _) => {
-                list_values.insert(0, head);
-                return Ok(MithraVal::List(line_num, list_values));
+                return cons_impl(head, tail_list, line_num);
             }
             _ => {}
         },
@@ -644,41 +645,3 @@ pub fn cons(args: Vec<MithraVal>, line_num: usize) -> Result<MithraVal> {
         &format!("(None | bool | int | float | String | List | Dict, List)")
     )))
 }
-
-//primitives :: [(String, [LillaVal] -> ThrowsLillaError LillaVal)]
-//primitives = [
-//        /("plus", numericBinop (+)),
-//        /("minus", numericBinop (-)),
-//        /("mul", numericBinop (*)),
-//        /("div", numericBinop div),
-//        /("mod", numericBinop mod),
-//        /("eqv", numBoolBinop (==)),
-//        /("lt", numBoolBinop (<)),
-//        /("gt", numBoolBinop (>)),
-//        /("ne", numBoolBinop (/=)),
-//        /("gte", numBoolBinop (>=)),
-//        /("lte", numBoolBinop (<=)),
-//        /("_eqv", strBoolBinop (==)),
-//        /("_lt", strBoolBinop (<)),
-//        /("_gt", strBoolBinop (>)),
-//        /("_ne", strBoolBinop (/=)),
-//        /("_gte", strBoolBinop (>=)),
-//        /("_lte", strBoolBinop (<=)),
-//        /("and", boolBoolBinop (&&)),
-//        /("or", boolBoolBinop (||)),
-//        /("head", head'),
-//        /("tail", tail'),
-//        ("cons", cons),
-//        /("concat", conc),
-//        ("replicate", repl),
-//        /("length", length'),
-//        /("toString", toString),
-//        /("toNumber", toNumber),
-//        /("take", take'),
-//        /("generateList", generateList),
-//        ("sum", sum'),
-//        ("max", max'),
-//        ("min", min'),
-//        /("split", split),
-//        /("not", not')
-//    ]

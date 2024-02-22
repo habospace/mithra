@@ -1,4 +1,6 @@
 
+
+
 def primeFactors(n, x):
     x = None
     y = False
@@ -16,7 +18,7 @@ def factors(n):
     def filterFunc(x):
         if kaka(8, 9, [1, "buzi", 3]):
             return eqv(mod(n, x), 0)
-    return take(1, filter(filterFunc, generateList(2, minus(n, 1))))
+    return take(1, filter(filterFunc, range(2, minus(n, 1))))
 
 def primeFactors(n):
     if eqv(n, 1):
@@ -54,7 +56,7 @@ def allSmithsBelow(x):
     if lte(x, 0):
         return {}
     else:
-        return filter(isSmith, generateList(0, x))
+        return filter(isSmith, range(0, x))
 
 x = 22
 
