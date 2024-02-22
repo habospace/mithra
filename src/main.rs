@@ -31,9 +31,6 @@ fn interactive_mithra(program: &mut Program) {
     }
 
     let mut rl = DefaultEditor::new().expect("Couldn't create editor...");
-    if rl.load_history("history.txt").is_err() {
-        //println!("No previous history.");
-    }
     loop {
         let readline = rl.readline(">>> ");
         match readline {
