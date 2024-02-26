@@ -63,7 +63,7 @@ Parser = Callable[[Text], T | None]
 # string and we don't want to partially consume the string on a
 # failed attempt, so always reset the  pointer over text when we fail.
 # the 'run_parser' decorater ensures this
-def run_parser(parser_f: Parser[T]) -> Callable[[Text], T | None]:
+def run_parser(parser_f: Parser[T]) -> Parser[T]:
     def wrapper(t: Text) -> T | None:
         before_pointer = t.pointer
         if (result := parser_f(t)) is None:
