@@ -48,6 +48,7 @@ pub enum Scope {
     Global,
 }
 
+// TODO: rename this as Interpreter
 pub struct Program {
     scope: Scope,
     pub memory: HashMap<String, MithraVal>,
@@ -213,6 +214,7 @@ impl Program {
                                 let n_correct_args = function.args.len();
                                 let n_call_args = call_args.len();
                                 if n_correct_args != n_call_args {
+                                    // TODO: we should raise this error as early as possible
                                     Err(anyhow!(incorrect_number_of_func_args_err(
                                         line_num,
                                         &func_name,

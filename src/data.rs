@@ -191,6 +191,7 @@ impl Text {
     }
 
     pub fn incr_pointer(&mut self) {
+        // TODO: use decr_poiner & incr pointer implicitly
         self.pointer += 1
     }
 

@@ -47,6 +47,7 @@ type FnMithraParser = FnParser<MithraVal>;
 type ClosureMithraParser = ClosureParser<MithraVal>;
 
 pub fn parse_null(text: &mut Text) -> Result<MithraVal, MithraError> {
+    // TODO: save reserved word chars as global vars
     string(format!("None").chars().collect())(text)?;
     Ok(MithraVal::Null)
 }
@@ -67,10 +68,10 @@ pub fn parse_int(text: &mut Text) -> Result<MithraVal, MithraError> {
         let string: String = chars.into_iter().collect();
         string.as_str().parse::<i64>()
     }
-    let negation = parse_char('-')(text);
+    let maybe_negation = parse_char('-')(text);
     let int_chars = numeric_chars(text)?;
     match chars_to_int(int_chars) {
-        Ok(int) => match negation {
+        Ok(int) => match maybe_negation {
             Ok(_) => Ok(MithraVal::Int(-int)),
             Err(_) => Ok(MithraVal::Int(int)),
         },
@@ -83,14 +84,14 @@ pub fn parse_float(text: &mut Text) -> Result<MithraVal, MithraError> {
         let string: String = chars.into_iter().collect();
         string.as_str().parse::<f64>()
     }
-    let negation = parse_char('-')(text);
+    let maybe_negation = parse_char('-')(text);
     let mut integer_part = numeric_chars(text)?;
     parse_char('.')(text)?;
     integer_part.extend(vec!['.']);
     let fractional_part = numeric_chars(text)?;
     integer_part.extend(fractional_part);
     match chars_to_float(integer_part) {
-        Ok(float) => match negation {
+        Ok(float) => match maybe_negation {
             Ok(_) => Ok(MithraVal::Float(-float)),
             Err(_) => Ok(MithraVal::Float(float)),
         },
