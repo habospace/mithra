@@ -2,7 +2,36 @@ from typing import TypeVar, Callable
 from dataclasses import dataclass
 from collections.abc import Iterable
 
+# Instead of just spending most of the time
+# explaining my own language I thought it 
+# would be cooler and more useful if we
+# implemented a super minimalistic language
+# together. But I will show my language in
+# the end and we will implement the filter
+# in it as well.
 
+# Disclaimer: the ideas I am using here are not my own
+# I took a lot of inspiration on how to write parsers
+# from Graham Hutton's paper on monadic parser 
+# combinators in haskell:
+# https://www.cs.nott.ac.uk/~pszgmh/monparsing.pdf
+# and from a book called write yourself a scheme
+# which is in haskell again and it helped
+# me write the interpreter or the evaluator part
+# https://en.wikibooks.org/wiki/Write_Yourself_a_Scheme_in_48_Hours
+# I put the links for both into the script if you're interested
+
+# Parts of an interpreted language:
+# 1. Lexer: raw str -> tokens
+# 2. Parser: tokens -> to AST (Abstract Syntax Tree)
+# 3. Interpreter: evaluates the AST 
+
+# In case of mithra we just have:
+# 1. Parser: str -> AST
+# 2. Interpreter: evaluates AST
+
+
+# How do we represent the raw text?
 @dataclass
 class Text:
     chars: str
@@ -22,10 +51,18 @@ class Text:
 
 T = TypeVar("T")
 
-
+# (t: Text) -> T | None
+# we use 'None' to indicate failure  for the sake of simplicity
+# but when you're more serious you'd want to use something that
+# can carry error context.
+# would use 'Result' in Rust (I do in fact use it in the Rust version)
+# or 'Either' in haskell which is essentially the inspiration for result type
 Parser = Callable[[Text], T | None]
 
-
+# Important: we might want to try a different parser for the same
+# string and we don't want to partially consume the string on a
+# failed attempt, so always reset the  pointer over text when we fail.
+# the 'run_parser' decorater ensures this
 def run_parser(parser_f: Parser[T]) -> Callable[[Text], T | None]:
     def wrapper(t: Text) -> T | None:
         before_pointer = t.pointer
@@ -35,6 +72,12 @@ def run_parser(parser_f: Parser[T]) -> Callable[[Text], T | None]:
 
     return wrapper
 
+
+# What is AST: some structured and managable representation
+# of the expressions of my programming language that I can
+# evaluate. I can't evaluate a raw string into a program
+# so I have turn my raw string int something that I can 
+# actually handle and evaluate
 
 @dataclass
 class Function:
@@ -46,7 +89,7 @@ class Function:
 @dataclass
 class FunctionCall:
     name: str
-    call_args: list["MithraValue"]
+    args_exprs: list["MithraValue"]
 
 
 @dataclass
@@ -54,12 +97,23 @@ class Assignment:
     var_name: str
     expr: "MithraValue"
 
+# could be just a str but
+# have to distinguish from
+# primitive str so we wrap
+# this into this dataclass
 
 @dataclass
 class Variable:
     name: str
 
 
+# 'MithraValue' is the top level AST 
+# type that wraps around all the previous
+# AST types or dataclasses. 
+# So 'MithraValue' can be any of those
+# dataclasses or some primitive types
+# eg. str or int which don't need any
+# dataclasses, they're good as themeselves.
 @dataclass
 class MithraValue:
     val: int \
@@ -112,12 +166,17 @@ def parse_variable(t: Text) -> Variable | None:
 
 @run_parser
 def parse_expr(t: Text) -> MithraValue | None:
+    # notice how '@run_parser' decorator becomes useful here as it resets the
+    # pointer over the text everytime a previous parser fails.
     for parser in [parse_int, parse_string, parse_function_call, parse_variable]:
         if result := parser(t):
             return MithraValue(val=result)
     return None
 
 
+# parser factory, creates new parser: iterates over
+# the chars of the string and tries to match the next
+# chars of our raw text to the chars of the arg string
 def create_string_parser(string: str) -> Parser[str]:
     @run_parser
     def parser(t: Text) -> str | None:
@@ -133,6 +192,13 @@ T1 = TypeVar("T1")
 T2 = TypeVar("T2")
 
 
+# parser combinators: create new parsers from other parsers. 'sep_by' takes a
+# a separator parser and a main parser and tries to match the main parser and
+# the separator parser in between as many times as it can. Very useful for parsing
+# lists which are just comma separated expressions or a function call which is
+# again just comma separated expressions between parentheses.
+# notice that the main parser returns 'T1' but the contructed parser
+# returns 'list[T1]' because it matches the main parser as many times as it can.
 def sep_by(main_parser: Parser[T1], sep_parser: Parser[T2]) -> Parser[list[T1]]:
     @run_parser
     def parser(t: Text) -> list[T1] | None:
@@ -156,6 +222,11 @@ def parse_function_call(t: Text) -> FunctionCall | None:
     if t.get_next() != "(":
         return None
     comma_parser = create_string_parser(", ")
+    # notice how expression parsing becomes recursive at this point because
+    # 'parse_function_call' parses call arg expressions via 'parse_expr'
+    # but 'parse_expr' then calls 'parse_function_call'. This recursivity is
+    # what enables us to parse nested function calls with arbitrary levels of
+    # nesting
     if (
         call_args := sep_by(main_parser=parse_expr, sep_parser=comma_parser)(t)
     ) is None:
@@ -177,19 +248,84 @@ def parse_assignment(t: Text) -> Assignment | None:
     return Assignment(var_name, expr)
 
 
+# So let's imagine that our programming language
+# consists of a series of single line assignment
+# expressions like the on below.
 code = """x = 5
 y = add(add(x, 2), add(1, add(3, 4)))
 z = add(y, 5)
 """
+# x = 5
+# y = (5 + 2) + (1 + (3 + 4)) or 15
+# z = 15 + 5 or 20
 
-exprs = [parse_assignment(Text(line)) for line in code.splitlines()]
+exprs = map(MithraValue, (parse_assignment(Text(line)) for line in code.splitlines()))
+
+exprs_ = [
+    # first assignment: x = 5
+    MithraValue(val=Assignment(var_name="x", expr=MithraValue(val=5))),
+    # second very nested assignment: y = add(add(x, 2), add(1, add(3, 4)))
+    MithraValue(
+        val=Assignment(
+            var_name="y",
+            expr=MithraValue(
+                val=FunctionCall(
+                    name="add",
+                    args_exprs=[
+                        MithraValue(
+                            val=FunctionCall(
+                                name="add",
+                                args_exprs=[
+                                    MithraValue(val=Variable(name="x")),
+                                    MithraValue(val=2),
+                                ],
+                            )
+                        ),
+                        MithraValue(
+                            val=FunctionCall(
+                                name="add",
+                                args_exprs=[
+                                    MithraValue(val=1),
+                                    MithraValue(
+                                        val=FunctionCall(
+                                            name="add",
+                                            args_exprs=[
+                                                MithraValue(val=3),
+                                                MithraValue(val=4),
+                                            ],
+                                        )
+                                    ),
+                                ],
+                            )
+                        ),
+                    ],
+                )
+            ),
+        )
+    ),
+    # z = add(y, 5)
+    MithraValue(
+        val=Assignment(
+            var_name="z",
+            expr=MithraValue(
+                val=FunctionCall(
+                    name="add",
+                    args_exprs=[
+                        MithraValue(val=Variable(name="y")),
+                        MithraValue(val=5),
+                    ],
+                )
+            ),
+        )
+    ),
+]
 
 
 VarName = FunctionName = str
 MithraFunction = Callable[[MithraValue, MithraValue], MithraValue]
 
 
-class Program:
+class Interpreter:
 
     memory: dict[VarName, MithraValue] = {}
     default_functions: dict[FunctionName, MithraFunction] = {
@@ -197,30 +333,44 @@ class Program:
     }
 
     def run(self, exprs: Iterable[MithraValue]) -> MithraValue | None:
+        # just evaluate code expression by expression
         evaluated: MithraValue | None = None
         for expr in exprs:
             evaluated = self.eval(expr)
+        # return final expression
         return evaluated
 
+    # 'eval' is just trying to evaluate higher level
+    # forms of AST to the most primitive or bottom level
+    # form, so in case of a function call which is a high
+    # level form of AST it would try to evaluate the function
+    # into its most primitive return value. in case of 'add'
+    # this would be an int
     def eval(self, expr: MithraValue) -> MithraValue:
         val = var = f_call = assignment = expr.val
-        if isinstance(val, Variable):
-            return self.eval(self.memory[var.name])
-        elif isinstance(val, int):
+        # when MithraVal is bottom level primitive val eg.:
+        # str or int then we just return it because it's
+        # already avaluated to the most pimitive level
+        if isinstance(val, int):
             return expr
         elif isinstance(val, str):
             return expr
-        elif isinstance(val, FunctionCall):
-            evaluated_args = [self.eval(arg) for arg in f_call.call_args]
-            function = self.default_functions[f_call.name]
-            return function(*evaluated_args)
-        else:  # Assignment
+        elif isinstance(val, Assignment):
             evaluated_expr = self.eval(assignment.expr)
             self.memory[assignment.var_name] = evaluated_expr
             return evaluated_expr
+        if isinstance(val, Variable):
+            return self.memory[var.name]
+        elif isinstance(val, FunctionCall):
+            # notice how evaluation becomes recursive here
+            # because we have to evaluate each of the call
+            # argument expressions which themeselves can be
+            # function calls so it becomes recursive
+            evaluated_args = [self.eval(arg) for arg in f_call.args_exprs]
+            function = self.default_functions[f_call.name]
+            return function(*evaluated_args)
 
 
-# breakpoint()
-program = Program()
-program.run(map(MithraValue, exprs))
-print(program.memory)
+intepreter = Interpreter()
+intepreter.run(exprs)
+print(intepreter.memory)
