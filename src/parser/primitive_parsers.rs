@@ -90,34 +90,28 @@ pub fn word(text: &mut Text) -> Result<String, MithraError> {
     }
 }
 
-pub fn string(string_chars: Vec<char>) -> Box<dyn Fn(&mut Text) -> Result<String, MithraError>> {
+pub fn string(string: String) -> Box<dyn Fn(&mut Text) -> Result<String, MithraError>> {
     Box::new(move |text: &mut Text| -> Result<String, MithraError> {
-        let mut string_pointer: usize = 0;
-        let mut parsed_string: String = String::new();
-        loop {
-            let next_string_char: Option<&char> = string_chars.get(string_pointer);
-            if next_string_char.is_none() {
-                return Ok(parsed_string);
-            }
+        for char in string.chars() {
             match text.get_next() {
                 Some(next_char) => {
-                    if *next_string_char.unwrap() == next_char {
-                        parsed_string.push(next_char);
-                        string_pointer += 1;
-                        text.incr_pointer()
+                    if char != next_char {
+                        return Err(nothing_parsed_err(text.line_num(), text.inline_position()));
                     } else {
-                        break;
+                        text.incr_pointer();
                     }
                 }
-                None => break,
+                None => {
+                    return Err(nothing_parsed_err(text.line_num(), text.inline_position()));
+                }
             }
         }
-        Err(nothing_parsed_err(text.line_num(), text.inline_position()))
+        Ok(string.clone())
     })
 }
 
-pub fn numeric_chars(text: &mut Text) -> Result<Vec<char>, MithraError> {
-    let mut numerics: Vec<char> = Vec::new();
+pub fn numeric(text: &mut Text) -> Result<String, MithraError> {
+    let mut numerics = String::new();
     loop {
         match text.get_next() {
             Some(next_char) => {
@@ -152,6 +146,6 @@ pub fn skip_many(skip_chars: Vec<char>) -> Box<dyn Fn(&mut Text) -> Result<Strin
                 None => break,
             }
         }
-        Ok(String::from(""))
+        Ok(format!(""))
     })
 }

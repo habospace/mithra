@@ -4,7 +4,7 @@ mod parser;
 
 use data::MithraVal;
 use data::Text;
-use evaluator::evaluator::Program;
+use evaluator::evaluator::Interpreter;
 use evaluator::evaluator::Scope;
 use parser::mithra_parsers;
 use std::fs::File;
@@ -13,7 +13,7 @@ use std::process;
 
 use rustyline::DefaultEditor;
 
-fn interactive_mithra(program: &mut Program) {
+fn interactive_mithra(program: &mut Interpreter) {
     fn display_mithraval(val: MithraVal) {
         match val {
             MithraVal::Null => println!("{}", val),
@@ -74,7 +74,7 @@ fn main() {
     let file_chars = get_file_chars(arg).expect("Couldn't turn '.mth' file to chars");
     match mithra_parsers::parse_inline_exprs(0)(&mut Text::new(file_chars)) {
         Ok(exprs) => {
-            let mut program = Program::new(Scope::Global);
+            let mut program = Interpreter::new(Scope::Global);
             match program.run(&exprs) {
                 Ok(_) => {
                     println!("\nMithra 1.0.0 (main, Jan 01 2024, 12:00:00)");

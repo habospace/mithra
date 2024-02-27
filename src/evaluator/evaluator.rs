@@ -48,16 +48,15 @@ pub enum Scope {
     Global,
 }
 
-// TODO: rename this as Interpreter
-pub struct Program {
+pub struct Interpreter {
     scope: Scope,
     pub memory: HashMap<String, MithraVal>,
     default_funcs: HashMap<FunctionName, DefaultFunction>,
 }
 
-impl Program {
-    pub fn new(scope: Scope) -> Program {
-        Program {
+impl Interpreter {
+    pub fn new(scope: Scope) -> Interpreter {
+        Interpreter {
             scope,
             memory: HashMap::new(),
             default_funcs: HashMap::from([
@@ -99,7 +98,7 @@ impl Program {
     fn get_default_func(&mut self, func_name: &FunctionName) -> Option<&DefaultFunction> {
         self.default_funcs.get(func_name)
     }
-    fn integrate_memory(&mut self, other_program: &Program) {
+    fn integrate_memory(&mut self, other_program: &Interpreter) {
         for (var_name, var_value) in other_program.memory.iter() {
             self.memory.insert(var_name.to_string(), var_value.clone());
         }
@@ -214,7 +213,6 @@ impl Program {
                                 let n_correct_args = function.args.len();
                                 let n_call_args = call_args.len();
                                 if n_correct_args != n_call_args {
-                                    // TODO: we should raise this error as early as possible
                                     Err(anyhow!(incorrect_number_of_func_args_err(
                                         line_num,
                                         &func_name,
@@ -237,7 +235,7 @@ impl Program {
         function: Function,
         call_args: Vec<MithraVal>,
     ) -> Result<MithraVal> {
-        let mut function_program = Program::new(Scope::Function);
+        let mut function_program = Interpreter::new(Scope::Function);
         function_program.integrate_memory(self);
         for (var_name, var_value) in function.args.iter().zip(call_args.iter()) {
             function_program.set_memory(var_name.to_string(), var_value.clone());
