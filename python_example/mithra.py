@@ -83,19 +83,19 @@ def run_parser(parser_f: Parser[T]) -> Parser[T]:
 class Function:
     name: str
     args: list[str]
-    exprs: list["MithraValue"]
+    exprs: list["AstValue"]
 
 
 @dataclass
 class FunctionCall:
     name: str
-    args_exprs: list["MithraValue"]
+    args_exprs: list["AstValue"]
 
 
 @dataclass
 class Assignment:
     var_name: str
-    expr: "MithraValue"
+    expr: "AstValue"
 
 # could be just a str but
 # have to distinguish from
@@ -107,15 +107,15 @@ class Variable:
     name: str
 
 
-# 'MithraValue' is the top level AST 
+# 'AstValue' is the top level AST 
 # type that wraps around all the previous
 # AST types or dataclasses. 
-# So 'MithraValue' can be any of those
+# So 'AstValue' can be any of those
 # dataclasses or some primitive types
 # eg. str or int which don't need any
 # dataclasses, they're good as themeselves.
 @dataclass
-class MithraValue:
+class AstValue:
     val: int \
        | str \
        | list[int | str] \
@@ -165,12 +165,12 @@ def parse_variable(t: Text) -> Variable | None:
 
 
 @run_parser
-def parse_expr(t: Text) -> MithraValue | None:
+def parse_expr(t: Text) -> AstValue | None:
     # notice how '@run_parser' decorator becomes useful here as it resets the
     # pointer over the text everytime a previous parser fails.
     for parser in [parse_int, parse_string, parse_function_call, parse_variable]:
         if result := parser(t):
-            return MithraValue(val=result)
+            return AstValue(val=result)
     return None
 
 
@@ -259,39 +259,39 @@ z = add(y, 5)
 # y = (5 + 2) + (1 + (3 + 4)) or 15
 # z = 15 + 5 or 20
 
-exprs = map(MithraValue, (parse_assignment(Text(line)) for line in code.splitlines()))
+exprs = map(AstValue, (parse_assignment(Text(line)) for line in code.splitlines()))
 
 exprs_ = [
     # first assignment: x = 5
-    MithraValue(val=Assignment(var_name="x", expr=MithraValue(val=5))),
+    AstValue(val=Assignment(var_name="x", expr=AstValue(val=5))),
     # second very nested assignment: y = add(add(x, 2), add(1, add(3, 4)))
-    MithraValue(
+    AstValue(
         val=Assignment(
             var_name="y",
-            expr=MithraValue(
+            expr=AstValue(
                 val=FunctionCall(
                     name="add",
                     args_exprs=[
-                        MithraValue(
+                        AstValue(
                             val=FunctionCall(
                                 name="add",
                                 args_exprs=[
-                                    MithraValue(val=Variable(name="x")),
-                                    MithraValue(val=2),
+                                    AstValue(val=Variable(name="x")),
+                                    AstValue(val=2),
                                 ],
                             )
                         ),
-                        MithraValue(
+                        AstValue(
                             val=FunctionCall(
                                 name="add",
                                 args_exprs=[
-                                    MithraValue(val=1),
-                                    MithraValue(
+                                    AstValue(val=1),
+                                    AstValue(
                                         val=FunctionCall(
                                             name="add",
                                             args_exprs=[
-                                                MithraValue(val=3),
-                                                MithraValue(val=4),
+                                                AstValue(val=3),
+                                                AstValue(val=4),
                                             ],
                                         )
                                     ),
@@ -304,15 +304,15 @@ exprs_ = [
         )
     ),
     # z = add(y, 5)
-    MithraValue(
+    AstValue(
         val=Assignment(
             var_name="z",
-            expr=MithraValue(
+            expr=AstValue(
                 val=FunctionCall(
                     name="add",
                     args_exprs=[
-                        MithraValue(val=Variable(name="y")),
-                        MithraValue(val=5),
+                        AstValue(val=Variable(name="y")),
+                        AstValue(val=5),
                     ],
                 )
             ),
@@ -322,19 +322,19 @@ exprs_ = [
 
 
 VarName = FunctionName = str
-MithraFunction = Callable[[MithraValue, MithraValue], MithraValue]
+MithraFunction = Callable[[AstValue, AstValue], AstValue]
 
 
 class Interpreter:
 
-    memory: dict[VarName, MithraValue] = {}
+    memory: dict[VarName, AstValue] = {}
     default_functions: dict[FunctionName, MithraFunction] = {
-        "add": lambda x, y: MithraValue(x.val + y.val)
+        "add": lambda x, y: AstValue(x.val + y.val)
     }
 
-    def run(self, exprs: Iterable[MithraValue]) -> MithraValue | None:
+    def run(self, exprs: Iterable[AstValue]) -> AstValue | None:
         # just evaluate code expression by expression
-        evaluated: MithraValue | None = None
+        evaluated: AstValue | None = None
         for expr in exprs:
             evaluated = self.eval(expr)
         # return final expression
@@ -346,7 +346,7 @@ class Interpreter:
     # level form of AST it would try to evaluate the function
     # into its most primitive return value. in case of 'add'
     # this would be an int
-    def eval(self, expr: MithraValue) -> MithraValue:
+    def eval(self, expr: AstValue) -> AstValue:
         val = var = f_call = assignment = expr.val
         # when MithraVal is bottom level primitive val eg.:
         # str or int then we just return it because it's
