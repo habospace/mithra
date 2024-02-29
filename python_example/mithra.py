@@ -45,7 +45,8 @@ class Text:
             self.pointer += 1
 
     def decr_pointer(self) -> None:
-        self.pointer -= 1
+        if self.pointer > 0:
+            self.pointer -= 1
 
 
 T = TypeVar("T")
