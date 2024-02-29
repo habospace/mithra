@@ -30,19 +30,22 @@ fn interactive_mithra(program: &mut Interpreter) {
         }
     }
 
-    let mut rl = DefaultEditor::new().expect("Couldn't create editor...");
+    let mut rl = DefaultEditor::new().expect("Couldn't create editor");
     loop {
         let readline = rl.readline(">>> ");
         match readline {
             Ok(line) => {
                 if line == format!("exit") {
                     break;
+                } else if line == format!("") {
+                    continue;
                 }
                 let _ = rl.add_history_entry(line.as_str());
-                match mithra_parsers::parse_inline_exprs(0)(&mut Text::new(line.chars().collect()))
-                {
-                    Ok(exprs) => {
-                        let result = program.run(&exprs);
+                match mithra_parsers::parse_inline_expr(0, true)(&mut Text::new(
+                    line.chars().collect(),
+                )) {
+                    Ok(expr) => {
+                        let result = program.run(&Vec::from([expr]));
                         match result {
                             Ok(val) => display_mithraval(val),
                             Err(runtime_err) => println! {"{}", runtime_err},

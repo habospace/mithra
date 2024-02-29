@@ -1,6 +1,4 @@
 use std::collections::BTreeMap;
-use std::num::ParseFloatError;
-use std::num::ParseIntError;
 
 use crate::data::ClosureParser;
 use crate::data::FnParser;
@@ -309,7 +307,7 @@ fn parse_indentation(indent: usize, error_on_failure: bool) -> ClosureMithraPars
     run_parser(parser)
 }
 
-fn parse_inline_expr(indent: usize, force_indentation: bool) -> ClosureMithraParser {
+pub fn parse_inline_expr(indent: usize, force_indentation: bool) -> ClosureMithraParser {
     let parser = Box::new(move |text: &mut Text| -> Result<MithraVal, MithraError> {
         // check if text has been consumed
         if text.get_next().is_none() {

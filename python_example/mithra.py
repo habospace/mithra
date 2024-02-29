@@ -30,7 +30,6 @@ from collections.abc import Iterable
 # 1. Parser: str -> AST
 # 2. Interpreter: evaluates AST
 
-
 # How do we represent the raw text?
 @dataclass
 class Text:
@@ -46,7 +45,8 @@ class Text:
             self.pointer += 1
 
     def decr_pointer(self) -> None:
-        self.pointer -= 1
+        if self.pointer > 0:
+            self.pointer -= 1
 
 
 T = TypeVar("T")
@@ -57,12 +57,14 @@ T = TypeVar("T")
 # can carry error context.
 # would use 'Result' in Rust (I do in fact use it in the Rust version)
 # or 'Either' in haskell which is essentially the inspiration for result type
+
 Parser = Callable[[Text], T | None]
 
 # Important: we might want to try a different parser for the same
 # string and we don't want to partially consume the string on a
 # failed attempt, so always reset the  pointer over text when we fail.
 # the 'run_parser' decorater ensures this
+
 def run_parser(parser_f: Parser[T]) -> Parser[T]:
     def wrapper(t: Text) -> T | None:
         before_pointer = t.pointer
@@ -114,14 +116,14 @@ class Variable:
 # dataclasses or some primitive types
 # eg. str or int which don't need any
 # dataclasses, they're good as themeselves.
-@dataclass
-class AstValue:
-    val: int \
-       | str \
-       | list[int | str] \
-       | Function \
-       | FunctionCall \
-       | Assignment
+
+AstValue = int \
+         | str \
+         | list[int | str] \
+         | Function \
+         | FunctionCall \
+         | Assignment \
+         | Function
 
 
 @run_parser
@@ -170,13 +172,14 @@ def parse_expr(t: Text) -> AstValue | None:
     # pointer over the text everytime a previous parser fails.
     for parser in [parse_int, parse_string, parse_function_call, parse_variable]:
         if result := parser(t):
-            return AstValue(val=result)
+            return result
     return None
 
 
 # parser factory, creates new parser: iterates over
 # the chars of the string and tries to match the next
 # chars of our raw text to the chars of the arg string
+
 def create_string_parser(string: str) -> Parser[str]:
     @run_parser
     def parser(t: Text) -> str | None:
@@ -199,6 +202,7 @@ T2 = TypeVar("T2")
 # again just comma separated expressions between parentheses.
 # notice that the main parser returns 'T1' but the contructed parser
 # returns 'list[T1]' because it matches the main parser as many times as it can.
+
 def sep_by(main_parser: Parser[T1], sep_parser: Parser[T2]) -> Parser[list[T1]]:
     @run_parser
     def parser(t: Text) -> list[T1] | None:
@@ -259,65 +263,50 @@ z = add(y, 5)
 # y = (5 + 2) + (1 + (3 + 4)) or 15
 # z = 15 + 5 or 20
 
-exprs = map(AstValue, (parse_assignment(Text(line)) for line in code.splitlines()))
-
+exprs = [parse_assignment(Text(line)) for line in code.splitlines()]
 exprs_ = [
     # first assignment: x = 5
-    AstValue(val=Assignment(var_name="x", expr=AstValue(val=5))),
+    Assignment(var_name='x', expr=5),
     # second very nested assignment: y = add(add(x, 2), add(1, add(3, 4)))
-    AstValue(
-        val=Assignment(
-            var_name="y",
-            expr=AstValue(
-                val=FunctionCall(
-                    name="add",
+    Assignment(
+        var_name='y',
+        expr=FunctionCall(
+            name='add',
+            args_exprs=[
+                FunctionCall(
+                    name='add',
                     args_exprs=[
-                        AstValue(
-                            val=FunctionCall(
-                                name="add",
-                                args_exprs=[
-                                    AstValue(val=Variable(name="x")),
-                                    AstValue(val=2),
-                                ],
-                            )
-                        ),
-                        AstValue(
-                            val=FunctionCall(
-                                name="add",
-                                args_exprs=[
-                                    AstValue(val=1),
-                                    AstValue(
-                                        val=FunctionCall(
-                                            name="add",
-                                            args_exprs=[
-                                                AstValue(val=3),
-                                                AstValue(val=4),
-                                            ],
-                                        )
-                                    ),
-                                ],
-                            )
-                        ),
-                    ],
+                        Variable(name='x'),
+                        2
+                    ]
+                ),
+                FunctionCall(
+                    name='add',
+                    args_exprs=[
+                        1,
+                        FunctionCall(
+                            name='add',
+                            args_exprs=[
+                                3,
+                                4
+                            ]
+                        )
+                    ]
                 )
-            ),
+            ]
         )
     ),
     # z = add(y, 5)
-    AstValue(
-        val=Assignment(
-            var_name="z",
-            expr=AstValue(
-                val=FunctionCall(
-                    name="add",
-                    args_exprs=[
-                        AstValue(val=Variable(name="y")),
-                        AstValue(val=5),
-                    ],
-                )
-            ),
+    Assignment(
+        var_name='z',
+        expr=FunctionCall(
+            name='add',
+            args_exprs=[
+                Variable(name='y'),
+                5
+            ]
         )
-    ),
+    )
 ]
 
 
@@ -329,7 +318,7 @@ class Interpreter:
 
     memory: dict[VarName, AstValue] = {}
     default_functions: dict[FunctionName, MithraFunction] = {
-        "add": lambda x, y: AstValue(x.val + y.val)
+        "add": lambda x, y: x + y
     }
 
     def run(self, exprs: Iterable[AstValue]) -> AstValue | None:
@@ -347,7 +336,7 @@ class Interpreter:
     # into its most primitive return value. in case of 'add'
     # this would be an int
     def eval(self, expr: AstValue) -> AstValue:
-        val = var = f_call = assignment = expr.val
+        val = var = f_call = assignment = expr
         # when MithraVal is bottom level primitive val eg.:
         # str or int then we just return it because it's
         # already avaluated to the most pimitive level
