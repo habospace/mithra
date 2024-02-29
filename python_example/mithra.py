@@ -45,8 +45,7 @@ class Text:
             self.pointer += 1
 
     def decr_pointer(self) -> None:
-        if self.pointer > 0:
-            self.pointer -= 1
+        self.pointer -= 1
 
 
 T = TypeVar("T")
@@ -336,21 +335,21 @@ class Interpreter:
     # into its most primitive return value. in case of 'add'
     # this would be an int
     def eval(self, expr: AstValue) -> AstValue:
-        val = var = f_call = assignment = expr
+        var = f_call = assignment = expr
         # when MithraVal is bottom level primitive val eg.:
         # str or int then we just return it because it's
         # already avaluated to the most pimitive level
-        if isinstance(val, int):
+        if isinstance(expr, int):
             return expr
-        elif isinstance(val, str):
+        elif isinstance(expr, str):
             return expr
-        elif isinstance(val, Assignment):
+        elif isinstance(expr, Assignment):
             evaluated_expr = self.eval(assignment.expr)
             self.memory[assignment.var_name] = evaluated_expr
             return evaluated_expr
-        if isinstance(val, Variable):
+        if isinstance(expr, Variable):
             return self.memory[var.name]
-        elif isinstance(val, FunctionCall):
+        elif isinstance(expr, FunctionCall):
             # notice how evaluation becomes recursive here
             # because we have to evaluate each of the call
             # argument expressions which themeselves can be
